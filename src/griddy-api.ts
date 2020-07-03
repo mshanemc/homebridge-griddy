@@ -2,7 +2,7 @@ import request from 'request-promise-native';
 
 const apiEndpoint = 'https://app.gogriddy.com/api/v1/insights/getnow';
 
-const getData = async (settlement_point: string = 'LZ_HOUSTON') => {
+const getData = async (settlement_point: string) => {
     const body = {
         settlement_point
     };

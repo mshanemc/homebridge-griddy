@@ -27,6 +27,7 @@ export class ExamplePlatformAccessory {
         private readonly accessory: PlatformAccessory
     ) {
         // set accessory information
+        console.log(this.platform.config);
         this.accessory
             .getService(this.platform.Service.AccessoryInformation)!
             .setCharacteristic(
@@ -105,7 +106,7 @@ export class ExamplePlatformAccessory {
 
     async update() {
         console.log('running update');
-        this.latestGriddyData = await getData();
+        this.latestGriddyData = await getData(this.platform.config.zone);
         console.log(
             `update finished. Next in ${this.latestGriddyData.seconds_until_refresh} seconds`
         );
@@ -232,11 +233,19 @@ export class ExamplePlatformAccessory {
 
     defineLow(data: GriddyResponse) {
         // if the curve is pretty flat but the price is cheap, let's go!
-        return data.now.price_ckwh < 1 || this.calculateIntensity(data) < 15;
+        return (
+            data.now.price_ckwh < this.platform.config.lowPriceCents ||
+            this.calculateIntensity(data) <
+                this.platform.config.lowPricePercentage
+        );
     }
 
     defineHigh(data: GriddyResponse) {
         // if the curve is pretty flat, we don't want to call a high price event
-        return data.now.price_ckwh > 2 && this.calculateIntensity(data) < 50;
+        return (
+            data.now.price_ckwh > this.platform.config.highPriceCents &&
+            this.calculateIntensity(data) <
+                this.platform.config.highPricePercentage
+        );
     }
 }
