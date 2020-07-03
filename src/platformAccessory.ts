@@ -244,7 +244,7 @@ export class ExamplePlatformAccessory {
         // if the curve is pretty flat, we don't want to call a high price event
         return (
             data.now.price_ckwh > this.platform.config.highPriceCents &&
-            this.calculateIntensity(data) <
+            this.calculateIntensity(data) >
                 this.platform.config.highPricePercentage
         );
     }
