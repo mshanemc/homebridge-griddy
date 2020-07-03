@@ -64,8 +64,10 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
         // or a user-defined array in the platform config.
         const exampleDevices = [
             {
-                exampleUniqueId: 'Griddy',
-                exampleDisplayName: 'Griddy'
+                exampleUniqueId: 'GriddyPrice',
+                deviceName: 'Griddy',
+                priceServiceName: 'Griddy Price',
+                intensityServiceName: 'Griddy Intensity'
             }
         ];
 
@@ -99,14 +101,11 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
                 new ExamplePlatformAccessory(this, existingAccessory);
             } else {
                 // the accessory does not yet exist, so we need to create it
-                this.log.info(
-                    'Adding new accessory:',
-                    device.exampleDisplayName
-                );
+                this.log.info('Adding new accessory:', device.deviceName);
 
                 // create a new accessory
                 const accessory = new this.api.platformAccessory(
-                    device.exampleDisplayName,
+                    device.deviceName,
                     uuid
                 );
 

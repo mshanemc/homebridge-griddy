@@ -1,5 +1,11 @@
-import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
-
+import {
+    Service,
+    PlatformAccessory,
+    CharacteristicValue,
+    CharacteristicSetCallback,
+    CharacteristicGetCallback
+} from 'homebridge';
+import { GriddyResponse, getData } from './griddy-api';
 import { ExampleHomebridgePlatform } from './platform';
 
 /**
@@ -8,85 +14,120 @@ import { ExampleHomebridgePlatform } from './platform';
  * Each accessory may expose multiple services of different service types.
  */
 export class ExamplePlatformAccessory {
-  private service: Service;
+    private priceService: Service;
+    private intensityService: Service;
+    private latestGriddyData: GriddyResponse | undefined = undefined;
+    /**
+     * These are just used to create a working example
+     * You should implement your own code to track the state of your accessory
+     */
 
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
-  }
+    constructor(
+        private readonly platform: ExampleHomebridgePlatform,
+        private readonly accessory: PlatformAccessory
+    ) {
+        // set accessory information
+        this.accessory
+            .getService(this.platform.Service.AccessoryInformation)!
+            .setCharacteristic(
+                this.platform.Characteristic.Manufacturer,
+                'Default-Manufacturer'
+            )
+            .setCharacteristic(
+                this.platform.Characteristic.Model,
+                'Default-Model'
+            )
+            .setCharacteristic(
+                this.platform.Characteristic.SerialNumber,
+                'Default-Serial'
+            );
 
-  constructor(
-    private readonly platform: ExampleHomebridgePlatform,
-    private readonly accessory: PlatformAccessory,
-  ) {
+        // we use a fake light sensor to represent the real-time price in cents
+        this.priceService =
+            this.accessory.getService(this.platform.Service.LightSensor) ||
+            this.accessory.addService(this.platform.Service.LightSensor);
+        this.intensityService =
+            this.accessory.getService(this.platform.Service.Lightbulb) ||
+            this.accessory.addService(this.platform.Service.Lightbulb);
 
-    // set accessory information
-    this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+        // set the service name, this is what is displayed as the default name on the Home app
+        // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
+        this.priceService.setCharacteristic(
+            this.platform.Characteristic.Name,
+            // accessory.context.device.priceServiceName
+            'Griddy Price'
+        );
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
-    // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+        this.intensityService.setCharacteristic(
+            this.platform.Characteristic.Name,
+            // accessory.context.device.intensityServiceName
+            'Griddy High Price'
+        );
 
-    // To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-    // when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-    // this.accessory.getService('NAME') ?? this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE');
+        // each service must implement at-minimum the "required characteristics" for the given service type
+        // see https://developers.homebridge.io/#/service/Lightbulb
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+        // register handlers for the On/Off Characteristic
+        this.priceService
+            .getCharacteristic(
+                this.platform.Characteristic.CurrentAmbientLightLevel
+            )
+            .on('get', this.getLevel.bind(this));
 
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+        // // register handlers for the Brightness Characteristic
+        this.priceService
+            .getCharacteristic(this.platform.Characteristic.StatusActive)
+            .on('get', this.getStatus.bind(this)); // SET - bind to the 'setBrightness` method below
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .on('set', this.setOn.bind(this))                // SET - bind to the `setOn` method below
-      .on('get', this.getOn.bind(this));               // GET - bind to the `getOn` method below
+        this.intensityService
+            .getCharacteristic(this.platform.Characteristic.Brightness)
+            .on('get', this.getIntensity.bind(this));
 
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .on('set', this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
+        this.intensityService
+            .getCharacteristic(this.platform.Characteristic.On)
+            .on('get', this.getIsHigh.bind(this));
 
-    // EXAMPLE ONLY
-    // Example showing how to update the state of a Characteristic asynchronously instead
-    // of using the `on('get')` handlers.
-    //
-    // Here we change update the brightness to a random value every 5 seconds using 
-    // the `updateCharacteristic` method.
-    setInterval(() => {
-      // assign the current brightness a random value between 0 and 100
-      const currentBrightness = Math.floor(Math.random() * 100);
+        this.update();
+    }
 
-      // push the new value to HomeKit
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, currentBrightness);
+    async update() {
+        console.log('running update');
+        this.latestGriddyData = await getData();
+        console.log(
+            `update finished. Next in ${this.latestGriddyData.seconds_until_refresh} seconds`
+        );
+        console.log(this.latestGriddyData.now);
+        console.log(
+            `intensity is ${this.calculateIntensity(this.latestGriddyData)}`
+        );
+        if (this.latestGriddyData) {
+            this.priceService.updateCharacteristic(
+                this.platform.Characteristic.StatusActive,
+                true
+            );
+            this.priceService.updateCharacteristic(
+                this.platform.Characteristic.CurrentAmbientLightLevel,
+                Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
+            );
+            // TODO: read the price vs. the high/low and set the level
+            this.intensityService.updateCharacteristic(
+                this.platform.Characteristic.Brightness,
+                this.calculateIntensity(this.latestGriddyData)
+            );
+            setTimeout(
+                async () => this.update(),
+                this.latestGriddyData.seconds_until_refresh * 1000
+            );
+        } else {
+            this.priceService.updateCharacteristic(
+                this.platform.Characteristic.StatusActive,
+                false
+            );
+            setTimeout(async () => this.update(), 10000);
+        }
+    }
 
-      this.platform.log.debug('Pushed updated current Brightness state to HomeKit:', currentBrightness);
-    }, 10000);
-  }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
-   */
-  setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
-
-    this.platform.log.debug('Set Characteristic On ->', value);
-
-    // you must call the callback function
-    callback(null);
-  }
-
-  /**
+    /**
    * Handle the "GET" requests from HomeKit
    * These are sent when HomeKit wants to know the current state of the accessory, for example, checking if a Light bulb is on.
    * 
@@ -99,32 +140,55 @@ export class ExamplePlatformAccessory {
    * @example
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
-  getOn(callback: CharacteristicGetCallback) {
+    getStatus(callback: CharacteristicGetCallback) {
+        // you must call the callback function
+        // the first argument should be null if there were no errors
+        // the second argument should be the value to return
+        callback(null, this.latestGriddyData ? true : false);
+    }
 
-    // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
+    /**
+     * Handle "SET" requests from HomeKit
+     * These are sent when the user changes the state of an accessory, for example, changing the Brightness
+     */
+    getLevel(callback: CharacteristicSetCallback) {
+        // you must call the callback function
+        if (this.latestGriddyData) {
+            callback(
+                null,
+                Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
+            );
+        } else {
+            callback(Error('No information available'));
+        }
+    }
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    getIntensity(callback: CharacteristicSetCallback) {
+        // you must call the callback function
+        if (this.latestGriddyData) {
+            callback(null, this.calculateIntensity(this.latestGriddyData));
+        } else {
+            callback(Error('No information available'));
+        }
+    }
 
-    // you must call the callback function
-    // the first argument should be null if there were no errors
-    // the second argument should be the value to return
-    callback(null, isOn);
-  }
+    getIsHigh(callback: CharacteristicSetCallback) {
+        if (this.latestGriddyData) {
+            callback(
+                null,
+                this.latestGriddyData.now.price_ckwh > 2 &&
+                    this.calculateIntensity(this.latestGriddyData) > 60
+            );
+        } else {
+            callback(Error('No information available'));
+        }
+    }
 
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, changing the Brightness
-   */
-  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
-
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
-
-    // you must call the callback function
-    callback(null);
-  }
-
+    calculateIntensity(data: GriddyResponse) {
+        return (
+            ((data.now.price_ckwh - data.now.low_ckwh) /
+                (data.now.high_ckwh - data.now.low_ckwh)) *
+            100
+        );
+    }
 }
