@@ -16,6 +16,7 @@ import { ExampleHomebridgePlatform } from './platform';
 export class ExamplePlatformAccessory {
     private priceService: Service;
     private intensityService: Service;
+    private lowPriceService: Service;
     private latestGriddyData: GriddyResponse | undefined = undefined;
     /**
      * These are just used to create a working example
@@ -46,7 +47,12 @@ export class ExamplePlatformAccessory {
         this.priceService =
             this.accessory.getService(this.platform.Service.LightSensor) ||
             this.accessory.addService(this.platform.Service.LightSensor);
+        // intensity is the price as a percentage of the day's range.  Low means it's cheap compared to the day's prices.  This device turns "on" when the price is high.
         this.intensityService =
+            this.accessory.getService(this.platform.Service.Lightbulb) ||
+            this.accessory.addService(this.platform.Service.Lightbulb);
+        // also uses the intensity, but turns on when the price is "low"
+        this.lowPriceService =
             this.accessory.getService(this.platform.Service.Lightbulb) ||
             this.accessory.addService(this.platform.Service.Lightbulb);
 
@@ -62,6 +68,11 @@ export class ExamplePlatformAccessory {
             this.platform.Characteristic.Name,
             // accessory.context.device.intensityServiceName
             'Griddy High Price'
+        );
+        this.lowPriceService.setCharacteristic(
+            this.platform.Characteristic.Name,
+            // accessory.context.device.intensityServiceName
+            'Griddy Low Price'
         );
 
         // each service must implement at-minimum the "required characteristics" for the given service type
@@ -87,6 +98,10 @@ export class ExamplePlatformAccessory {
             .getCharacteristic(this.platform.Characteristic.On)
             .on('get', this.getIsHigh.bind(this));
 
+        this.lowPriceService
+            .getCharacteristic(this.platform.Characteristic.On)
+            .on('get', this.getIsLow.bind(this));
+
         this.update();
     }
 
@@ -109,10 +124,17 @@ export class ExamplePlatformAccessory {
                 this.platform.Characteristic.CurrentAmbientLightLevel,
                 Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
             );
-            // TODO: read the price vs. the high/low and set the level
             this.intensityService.updateCharacteristic(
                 this.platform.Characteristic.Brightness,
                 this.calculateIntensity(this.latestGriddyData)
+            );
+            this.intensityService.updateCharacteristic(
+                this.platform.Characteristic.On,
+                this.defineHigh(this.latestGriddyData)
+            );
+            this.lowPriceService.updateCharacteristic(
+                this.platform.Characteristic.On,
+                this.defineLow(this.latestGriddyData)
             );
             setTimeout(
                 async () => this.update(),
@@ -174,11 +196,15 @@ export class ExamplePlatformAccessory {
 
     getIsHigh(callback: CharacteristicSetCallback) {
         if (this.latestGriddyData) {
-            callback(
-                null,
-                this.latestGriddyData.now.price_ckwh > 2 &&
-                    this.calculateIntensity(this.latestGriddyData) > 60
-            );
+            callback(null, this.defineHigh(this.latestGriddyData));
+        } else {
+            callback(Error('No information available'));
+        }
+    }
+
+    getIsLow(callback: CharacteristicSetCallback) {
+        if (this.latestGriddyData) {
+            callback(null, this.defineLow(this.latestGriddyData));
         } else {
             callback(Error('No information available'));
         }
@@ -190,5 +216,15 @@ export class ExamplePlatformAccessory {
                 (data.now.high_ckwh - data.now.low_ckwh)) *
             100
         );
+    }
+
+    defineLow(data: GriddyResponse) {
+        // if the curve is pretty flat but the price is cheap, let's go!
+        return data.now.price_ckwh < 1 || this.calculateIntensity(data) < 15;
+    }
+
+    defineHigh(data: GriddyResponse) {
+        // if the curve is pretty flat, we don't want to call a high price event
+        return data.now.price_ckwh > 2 && this.calculateIntensity(data) < 50;
     }
 }
