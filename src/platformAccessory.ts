@@ -1,7 +1,6 @@
 import {
     Service,
     PlatformAccessory,
-    CharacteristicValue,
     CharacteristicSetCallback,
     CharacteristicGetCallback
 } from 'homebridge';
@@ -53,8 +52,8 @@ export class ExamplePlatformAccessory {
             this.accessory.addService(this.platform.Service.Lightbulb);
         // also uses the intensity, but turns on when the price is "low"
         this.lowPriceService =
-            this.accessory.getService(this.platform.Service.Lightbulb) ||
-            this.accessory.addService(this.platform.Service.Lightbulb);
+            this.accessory.getService(this.platform.Service.Switch) ||
+            this.accessory.addService(this.platform.Service.Switch);
 
         // set the service name, this is what is displayed as the default name on the Home app
         // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
@@ -85,7 +84,6 @@ export class ExamplePlatformAccessory {
             )
             .on('get', this.getLevel.bind(this));
 
-        // // register handlers for the Brightness Characteristic
         this.priceService
             .getCharacteristic(this.platform.Characteristic.StatusActive)
             .on('get', this.getStatus.bind(this)); // SET - bind to the 'setBrightness` method below
@@ -116,22 +114,27 @@ export class ExamplePlatformAccessory {
             `intensity is ${this.calculateIntensity(this.latestGriddyData)}`
         );
         if (this.latestGriddyData) {
+            // make it clear that we do have price data
             this.priceService.updateCharacteristic(
                 this.platform.Characteristic.StatusActive,
                 true
             );
+            // sets the price on the price service so you can see it in Home
             this.priceService.updateCharacteristic(
                 this.platform.Characteristic.CurrentAmbientLightLevel,
                 Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
             );
+            // sets the intensity
             this.intensityService.updateCharacteristic(
                 this.platform.Characteristic.Brightness,
                 this.calculateIntensity(this.latestGriddyData)
             );
+            // flips the high price service to on
             this.intensityService.updateCharacteristic(
                 this.platform.Characteristic.On,
                 this.defineHigh(this.latestGriddyData)
             );
+            // flips the low price service to in
             this.lowPriceService.updateCharacteristic(
                 this.platform.Characteristic.On,
                 this.defineLow(this.latestGriddyData)
@@ -141,8 +144,17 @@ export class ExamplePlatformAccessory {
                 this.latestGriddyData.seconds_until_refresh * 1000
             );
         } else {
+            // we don't know anything so set things to off
             this.priceService.updateCharacteristic(
                 this.platform.Characteristic.StatusActive,
+                false
+            );
+            this.intensityService.updateCharacteristic(
+                this.platform.Characteristic.On,
+                false
+            );
+            this.lowPriceService.updateCharacteristic(
+                this.platform.Characteristic.On,
                 false
             );
             setTimeout(async () => this.update(), 10000);
