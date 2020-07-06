@@ -18,6 +18,10 @@ Pretends to be a lightbulb. Turns on if the price is high and also uses its brig
 
 Pretends to be a switch. Turns on if the price is low.
 
+## How do I define high/low or pick my load zone?
+
+See the config.schema.json (which Homebridge surfaces with a nice ui) for explanation of the options and what they mean.
+
 ## What can I do with that?
 
 Here's what devices look like
