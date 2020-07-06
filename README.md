@@ -17,3 +17,7 @@ Pretends to be a lightbulb. Turns on if the price is high and also uses its brig
 ## Griddy Low Price
 
 Pretends to be a switch. Turns on if the price is low.
+
+## What would I do with that
+
+Here's
