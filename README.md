@@ -18,6 +18,13 @@ Pretends to be a lightbulb. Turns on if the price is high and also uses its brig
 
 Pretends to be a switch. Turns on if the price is low.
 
-## What would I do with that
+## What can I do with that?
 
-Here's
+Here's what devices look like
+![Device Example](https://raw.githubusercontent.com/mshanemc/homebridge-griddy/master/assets/example%20devices.png)
+
+I use them to trigger automations when the price is very low or very high
+![Automations](https://raw.githubusercontent.com/mshanemc/homebridge-griddy/master/assets/example%20automations.png)
+
+This automation will turn off some lights and set three Nests to eco mode when the price is high
+![Automation Detail](https://raw.githubusercontent.com/mshanemc/homebridge-griddy/master/assets/example%20automation%20details.png)
