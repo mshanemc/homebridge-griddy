@@ -177,7 +177,9 @@ export class ExamplePlatformAccessory {
   }
 
   calculateIntensity(data: GriddyResponse) {
-    return ((data.now.price_ckwh - data.now.low_ckwh) / (data.now.high_ckwh - data.now.low_ckwh)) * 100;
+    // let's be more specific about how far out the forecast can reach.  Only look forward 18 hours
+    const high = Math.max(...data.forecast.slice(0, 18).map((hour) => hour.price_ckwh));
+    return ((data.now.price_ckwh - data.now.low_ckwh) / (high - data.now.low_ckwh)) * 100;
   }
 
   defineLow(data: GriddyResponse) {
