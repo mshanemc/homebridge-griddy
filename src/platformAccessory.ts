@@ -88,9 +88,9 @@ export class ExamplePlatformAccessory {
     this.platform.log.debug('latest data', this.latestGriddyData.now);
     // this.platform.log.debug(`intensity is ${this.calculateIntensity(this.latestGriddyData)}`);
     this.platform.log.info(
-      `Price now ${this.latestGriddyData.now.price_ckwh}, intensity is ${this.calculateIntensity(
-        this.latestGriddyData
-      )}`
+      `Price now ${
+        Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
+      }, intensity is ${this.calculateIntensity(this.latestGriddyData)}`
     );
 
     if (this.latestGriddyData) {
@@ -180,7 +180,7 @@ export class ExamplePlatformAccessory {
   calculateIntensity(data: GriddyResponse) {
     // let's be more specific about how far out the forecast can reach.  Only look forward 18 hours
     const high = Math.max(...data.forecast.slice(0, 18).map((hour) => hour.price_ckwh));
-    return ((data.now.price_ckwh - data.now.low_ckwh) / (high - data.now.low_ckwh)) * 100;
+    return Math.round(((data.now.price_ckwh - data.now.low_ckwh) / (high - data.now.low_ckwh)) * 100);
   }
 
   defineLow(data: GriddyResponse) {
