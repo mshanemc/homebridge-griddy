@@ -1,7 +1,7 @@
 {
     "displayName": "Homebridge Griddy",
     "name": "@mshanemc/homebridge-griddy",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Helps devices behave according to forecast and real-time power prices",
     "license": "Apache-2.0",
     "repository": {
