@@ -186,8 +186,8 @@ export class ExamplePlatformAccessory {
   defineLow(data: GriddyResponse) {
     // if the curve is pretty flat but the price is cheap, let's go!
     return (
-      data.now.price_ckwh < this.platform.config.lowPriceCents ||
-      this.calculateIntensity(data) < this.platform.config.lowPricePercentage
+      data.now.price_ckwh <= this.platform.config.lowPriceCents ||
+      this.calculateIntensity(data) <= this.platform.config.lowPricePercentage
     );
   }
 
