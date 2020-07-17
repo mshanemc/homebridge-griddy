@@ -1,73 +1,73 @@
 {
-    "pluginAlias": "Homebridge Griddy",
-    "pluginType": "platform",
-    "singular": true,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "name": {
-                "title": "Name",
-                "type": "string",
-                "required": true,
-                "default": "Griddy"
-            },
-            "zone": {
-                "title": "Zone",
-                "type": "string",
-                "required": true,
-                "default": "LZ_HOUSTON",
-                "description": "Google ERCOT Load Zone Map if you're not sure",
-                "oneOf": [
-                    {
-                        "title": "Houston",
-                        "enum": ["LZ_HOUSTON"]
-                    },
-                    {
-                        "title": "North",
-                        "enum": ["LZ_NORTH"]
-                    },
-                    {
-                        "title": "South",
-                        "enum": ["LZ_SOUTH"]
-                    },
-                    {
-                        "title": "West",
-                        "enum": ["LZ_WEST"]
-                    }
-                ]
-            },
-            "lowPriceCents": {
-                "title": "What's a low price (cents)",
-                "description": "The Low Price On is always triggered when the price is below this level",
-                "type": "number",
-                "required": true,
-                "default": 1
-            },
-            "lowPricePercentage": {
-                "title": "What's a low price (%)",
-                "description": "The Low Price On is always triggered when the price is below this as a percent of the day's hi/low range",
-                "type": "integer",
-                "required": true,
-                "default": 15,
-                "minimum": 0,
-                "maximum": 100
-            },
-            "highPriceCents": {
-                "title": "What's a high price (cents)",
-                "description": "The High Price On is only triggered when the price is above this level",
-                "type": "number",
-                "required": true,
-                "default": 2
-            },
-            "highPricePercentage": {
-                "title": "What's a high price (%)",
-                "description": "The High Price On only triggered when the price is above this as a percent of the day's hi/low range",
-                "type": "integer",
-                "required": true,
-                "default": 50,
-                "minimum": 0,
-                "maximum": 100
-            }
-        }
+  "pluginAlias": "Homebridge Griddy",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "Griddy"
+      },
+      "zone": {
+        "title": "Zone",
+        "type": "string",
+        "required": true,
+        "default": "LZ_HOUSTON",
+        "description": "Google ERCOT Load Zone Map if you're not sure",
+        "oneOf": [
+          {
+            "title": "Houston",
+            "enum": ["LZ_HOUSTON"]
+          },
+          {
+            "title": "North",
+            "enum": ["LZ_NORTH"]
+          },
+          {
+            "title": "South",
+            "enum": ["LZ_SOUTH"]
+          },
+          {
+            "title": "West",
+            "enum": ["LZ_WEST"]
+          }
+        ]
+      },
+      "lowPriceCents": {
+        "title": "What's a low price (cents)",
+        "description": "The Low Price On is always triggered when the price is below this level",
+        "type": "number",
+        "required": true,
+        "default": 1
+      },
+      "lowPricePercentage": {
+        "title": "What's a low price (%)",
+        "description": "The Low Price On is always triggered when the price is below this as a percent of the day's hi/low range",
+        "type": "number",
+        "required": true,
+        "default": 15,
+        "minimum": 0,
+        "maximum": 100
+      },
+      "highPriceCents": {
+        "title": "What's a high price (cents)",
+        "description": "The High Price On is only triggered when the price is above this level",
+        "type": "number",
+        "required": true,
+        "default": 2
+      },
+      "highPricePercentage": {
+        "title": "What's a high price (%)",
+        "description": "The High Price On only triggered when the price is above this as a percent of the day's hi/low range",
+        "type": "integer",
+        "required": true,
+        "default": 50,
+        "minimum": 0,
+        "maximum": 100
+      }
     }
+  }
 }
