@@ -12,7 +12,7 @@ Will be offline if no data is available from Griddy's API
 
 ## Griddy High Price
 
-Pretends to be a lightbulb. Turns on if the price is high and also uses its brightness to shows the current price as a % of the day's range
+Pretends to be a lightbulb. Turns on if the price is high and also uses its brightness to shows the current price as a % of the day's range (intensity)
 
 ## Griddy Low Price
 
@@ -32,3 +32,6 @@ I use them to trigger automations when the price is very low or very high
 
 This automation will turn off some lights and set three Nests to eco mode when the price is high
 ![Automation Detail](https://raw.githubusercontent.com/mshanemc/homebridge-griddy/master/assets/example%20automation%20details.png)
+
+So now my thermostats are responding to market prices and forecast in real-time.
+![DynamicThermostats](https://raw.githubusercontent.com/mshanemc/homebridge-griddy/master/assets/dynamicThermostats.png)
