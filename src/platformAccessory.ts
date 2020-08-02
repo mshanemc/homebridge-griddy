@@ -1,5 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
-import { GriddyResponse, getData } from './griddy-api';
+import moment from 'moment';
+import { GriddyResponse, getData, GriddyItem } from './griddy-api';
 import { ExampleHomebridgePlatform } from './platform';
 
 /**
@@ -12,6 +13,7 @@ export class ExamplePlatformAccessory {
   private intensityService: Service;
   private lowPriceService: Service;
   private latestGriddyData: GriddyResponse | undefined = undefined;
+  private history: GriddyItem[] = [];
   /**
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
@@ -90,7 +92,7 @@ export class ExamplePlatformAccessory {
     this.platform.log.info(
       `Price now ${
         Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
-      }, intensity is ${this.calculateIntensity(this.latestGriddyData)}`
+      }, intensity is ${this.calculateIntensity(this.latestGriddyData, this.history)}`
     );
 
     if (this.latestGriddyData) {
@@ -104,16 +106,27 @@ export class ExamplePlatformAccessory {
       // sets the intensity
       this.intensityService.updateCharacteristic(
         this.platform.Characteristic.Brightness,
-        this.calculateIntensity(this.latestGriddyData)
+        this.calculateIntensity(this.latestGriddyData, this.history)
       );
       // flips the high price service to on
       this.intensityService.updateCharacteristic(
         this.platform.Characteristic.On,
-        this.defineHigh(this.latestGriddyData)
+        this.defineHigh(this.latestGriddyData, this.history)
       );
       // flips the low price service to in
-      this.lowPriceService.updateCharacteristic(this.platform.Characteristic.On, this.defineLow(this.latestGriddyData));
+      this.lowPriceService.updateCharacteristic(
+        this.platform.Characteristic.On,
+        this.defineLow(this.latestGriddyData, this.history)
+      );
       setTimeout(async () => this.update(), this.latestGriddyData.seconds_until_refresh * 1000);
+
+      // push to the history to help with intensity calculations
+      // truncate the history to just today's stuff
+
+      this.history = [
+        ...this.history.filter((item) => moment(item.date_local_tz).isSame(moment(), 'day')),
+        this.latestGriddyData.now
+      ];
     } else {
       // we don't know anything so set things to off
       this.priceService.updateCharacteristic(this.platform.Characteristic.StatusActive, false);
@@ -155,7 +168,7 @@ export class ExamplePlatformAccessory {
   getIntensity(callback: CharacteristicSetCallback) {
     // you must call the callback function
     if (this.latestGriddyData) {
-      callback(null, this.calculateIntensity(this.latestGriddyData));
+      callback(null, this.calculateIntensity(this.latestGriddyData, this.history));
     } else {
       callback(Error('No information available'));
     }
@@ -163,7 +176,7 @@ export class ExamplePlatformAccessory {
 
   getIsHigh(callback: CharacteristicSetCallback) {
     if (this.latestGriddyData) {
-      callback(null, this.defineHigh(this.latestGriddyData));
+      callback(null, this.defineHigh(this.latestGriddyData, this.history));
     } else {
       callback(Error('No information available'));
     }
@@ -171,31 +184,33 @@ export class ExamplePlatformAccessory {
 
   getIsLow(callback: CharacteristicSetCallback) {
     if (this.latestGriddyData) {
-      callback(null, this.defineLow(this.latestGriddyData));
+      callback(null, this.defineLow(this.latestGriddyData, this.history));
     } else {
       callback(Error('No information available'));
     }
   }
 
-  calculateIntensity(data: GriddyResponse) {
+  calculateIntensity(data: GriddyResponse, history: GriddyItem[]) {
     // let's be more specific about how far out the forecast can reach.  Only look forward 18 hours
     const high = Math.max(...data.forecast.slice(0, 18).map((hour) => hour.price_ckwh));
-    return Math.round(((data.now.price_ckwh - data.now.low_ckwh) / (high - data.now.low_ckwh)) * 100);
+    // the lowest of today's history and the forecast low
+    const low = Math.min(...history.map((item) => item.price_ckwh), data.now.low_ckwh);
+    return Math.round(((data.now.price_ckwh - low) / (high - low)) * 100);
   }
 
-  defineLow(data: GriddyResponse) {
+  defineLow(data: GriddyResponse, history: GriddyItem[]) {
     // if the curve is pretty flat but the price is cheap, let's go!
     return (
       data.now.price_ckwh <= this.platform.config.lowPriceCents ||
-      this.calculateIntensity(data) <= this.platform.config.lowPricePercentage
+      this.calculateIntensity(data, history) <= this.platform.config.lowPricePercentage
     );
   }
 
-  defineHigh(data: GriddyResponse) {
+  defineHigh(data: GriddyResponse, history: GriddyItem[]) {
     // if the curve is pretty flat, we don't want to call a high price event
     return (
       data.now.price_ckwh > this.platform.config.highPriceCents &&
-      this.calculateIntensity(data) > this.platform.config.highPricePercentage
+      this.calculateIntensity(data, history) > this.platform.config.highPricePercentage
     );
   }
 }

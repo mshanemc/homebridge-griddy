@@ -34,4 +34,4 @@ interface GriddyResponse {
   seconds_until_refresh: number;
 }
 
-export { getData, GriddyResponse };
+export { getData, GriddyResponse, GriddyItem };

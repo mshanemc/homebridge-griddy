@@ -26,6 +26,7 @@
         "homebridge-plugin"
     ],
     "dependencies": {
+        "moment": "^2.27.0",
         "request": "^2.34",
         "request-promise-native": "^1.0.8"
     },
