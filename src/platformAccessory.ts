@@ -85,15 +85,24 @@ export class ExamplePlatformAccessory {
 
   async update() {
     this.platform.log.debug('running update');
-    this.latestGriddyData = await getData(this.platform.config.zone);
-    this.platform.log.debug(`update finished. Next in ${this.latestGriddyData.seconds_until_refresh} seconds`);
-    this.platform.log.debug('latest data', this.latestGriddyData.now);
-    // this.platform.log.debug(`intensity is ${this.calculateIntensity(this.latestGriddyData)}`);
-    this.platform.log.info(
-      `Price now ${
-        Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
-      }, intensity is ${this.calculateIntensity(this.latestGriddyData, this.history)}`
-    );
+    try {
+      this.latestGriddyData = await getData(this.platform.config.zone);
+      this.platform.log.debug(`update finished. Next in ${this.latestGriddyData.seconds_until_refresh} seconds`);
+      this.platform.log.debug('latest data', this.latestGriddyData.now);
+      // this.platform.log.debug(`intensity is ${this.calculateIntensity(this.latestGriddyData)}`);
+      this.platform.log.info(
+        `Price now ${
+          Math.round(this.latestGriddyData.now.price_ckwh * 1000) / 1000
+        }, intensity is ${this.calculateIntensity(this.latestGriddyData, this.history)}`
+      );
+    } catch (error) {
+      this.platform.log.error('error connecting to Griddy data api');
+      this.priceService.updateCharacteristic(this.platform.Characteristic.StatusActive, false);
+      this.intensityService.updateCharacteristic(this.platform.Characteristic.On, false);
+      this.lowPriceService.updateCharacteristic(this.platform.Characteristic.On, false);
+      // if you got an error, schedule the retry
+      setTimeout(async () => this.update(), 10000);
+    }
 
     if (this.latestGriddyData) {
       // make it clear that we do have price data
